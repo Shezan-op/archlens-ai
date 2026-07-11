@@ -6,14 +6,10 @@ import { Scan, Key, X } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { UploadZone } from "@/components/upload/upload-zone";
 import { ImagePreview } from "@/components/upload/image-preview";
-import { ProviderSelector } from "@/components/controls/provider-selector";
-import { ModelSelector } from "@/components/controls/model-selector";
 import { AnalysisLoading, defaultLoadingStages } from "@/components/analysis/analysis-loading";
 import { ReportView } from "@/components/analysis/report-view";
 import { ErrorCard } from "@/components/ui/error-card";
-import { getVisionModels, defaultVisionModel, defaultFallbackModel } from "@/config/models";
 import { siteConfig } from "@/config/site";
-import type { ProviderID } from "@/types/provider";
 import type { AnalysisResult, AnalysisStatus, ReportMetadata } from "@/types/analysis";
 
 /** Image data from the upload zone */
@@ -28,11 +24,7 @@ interface ImageData {
 export default function HomePage() {
   // Core state
   const [image, setImage] = useState<ImageData | null>(null);
-  const [provider, setProvider] = useState<ProviderID>("ollama");
-  const [model, setModel] = useState<string>(defaultVisionModel.ollama);
-  const [openRouterKey, setOpenRouterKey] = useState<string>("");
   const [ollamaKey, setOllamaKey] = useState<string>("");
-  const [ollamaBaseUrl, setOllamaBaseUrl] = useState<string>("https://your-ollama-cloud/v1");
   const [status, setStatus] = useState<AnalysisStatus>("idle");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,43 +33,17 @@ export default function HomePage() {
 
   const loadingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Load saved API keys from localStorage
+  // Load saved API key from localStorage
   useEffect(() => {
-    const savedOr = localStorage.getItem("archlens-openrouter-key");
-    if (savedOr) setOpenRouterKey(savedOr);
-    const savedOl = localStorage.getItem("archlens-ollama-key");
-    if (savedOl) setOllamaKey(savedOl);
-    const savedUrl = localStorage.getItem("archlens-ollama-url");
-    if (savedUrl) setOllamaBaseUrl(savedUrl);
+    const savedKey = localStorage.getItem("archlens-ollama-key");
+    if (savedKey) setOllamaKey(savedKey);
   }, []);
 
-  // When provider changes, reset model to default for that provider
-  const handleProviderChange = useCallback((newProvider: ProviderID) => {
-    setProvider(newProvider);
-    setModel(defaultVisionModel[newProvider]);
-    if (newProvider === "openrouter" && !openRouterKey) {
-      setShowSettings(true);
-    }
-  }, [openRouterKey]);
-
-  // Save API keys
-  const handleOpenRouterKeyChange = useCallback((key: string) => {
-    setOpenRouterKey(key);
-    localStorage.setItem("archlens-openrouter-key", key);
-  }, []);
-
+  // Save API key
   const handleOllamaKeyChange = useCallback((key: string) => {
     setOllamaKey(key);
     localStorage.setItem("archlens-ollama-key", key);
   }, []);
-
-  const handleOllamaUrlChange = useCallback((url: string) => {
-    setOllamaBaseUrl(url);
-    localStorage.setItem("archlens-ollama-url", url);
-  }, []);
-
-  // Get vision models for current provider
-  const visionModels = getVisionModels(provider);
 
   // Simulate loading stage progression
   const startLoadingStages = useCallback(() => {
@@ -99,12 +65,8 @@ export default function HomePage() {
   const handleAnalyze = useCallback(async () => {
     if (!image) return;
 
-    const providerName = provider === "openrouter" ? "OpenRouter" : "Ollama";
-    const currentKey = provider === "openrouter" ? openRouterKey : (ollamaKey || "ollama");
-
-    // Validate API key for OpenRouter
-    if (provider === "openrouter" && !currentKey) {
-      setError(`OpenRouter requires an API key. Add it in settings.`);
+    if (!ollamaKey) {
+      setError(`Ollama Cloud requires an API key. Add it in settings.`);
       setShowSettings(true);
       return;
     }
@@ -120,11 +82,7 @@ export default function HomePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           image: image.base64,
-          provider,
-          model,
-          fallbackModel: defaultFallbackModel[provider],
-          apiKey: currentKey,
-          baseUrl: provider === "ollama" ? ollamaBaseUrl : undefined,
+          apiKey: ollamaKey,
         }),
       });
 
@@ -143,7 +101,7 @@ export default function HomePage() {
     } finally {
       if (loadingInterval.current) clearInterval(loadingInterval.current);
     }
-  }, [image, provider, model, openRouterKey, ollamaKey, ollamaBaseUrl, startLoadingStages]);
+  }, [image, ollamaKey, startLoadingStages]);
 
   // Reset to initial state
   const handleReset = useCallback(() => {
@@ -163,8 +121,8 @@ export default function HomePage() {
           month: "long",
           day: "numeric",
         }),
-        provider: provider === "ollama" ? "Ollama Cloud" : "OpenRouter",
-        model,
+        provider: "Ollama Cloud",
+        model: "gemma3:12b-cloud",
         confidenceLevel: result.confidence.overall,
       }
     : null;
@@ -205,87 +163,32 @@ export default function HomePage() {
                   </button>
                 </div>
 
-                {provider === "openrouter" && (
-                  <div>
-                    <label
-                      className="mb-1.5 block text-xs font-medium"
-                      style={{ color: "var(--text-secondary)" }}
-                    >
-                      <Key size={12} className="mr-1 inline" />
-                      OpenRouter API Key
-                    </label>
-                    <input
-                      type="password"
-                      value={openRouterKey}
-                      onChange={(e) => handleOpenRouterKeyChange(e.target.value)}
-                      placeholder="sk-or-..."
-                      className="w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors"
-                      style={{
-                        borderColor: "var(--border-default)",
-                        backgroundColor: "var(--bg-primary)",
-                        color: "var(--text-primary)",
-                      }}
-                      onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}
-                      onBlur={(e) => (e.target.style.borderColor = "var(--border-default)")}
-                    />
-                    <p className="mt-1 text-xs" style={{ color: "var(--text-tertiary)" }}>
-                      Stored locally. Never sent to our servers.
-                    </p>
-                  </div>
-                )}
-
-                {provider === "ollama" && (
-                  <div className="space-y-4">
-                    <div>
-                      <label
-                        className="mb-1.5 block text-xs font-medium"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        <Key size={12} className="mr-1 inline" />
-                        Ollama API Key
-                      </label>
-                      <input
-                        type="password"
-                        value={ollamaKey}
-                        onChange={(e) => handleOllamaKeyChange(e.target.value)}
-                        placeholder="Optional"
-                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors"
-                        style={{
-                          borderColor: "var(--border-default)",
-                          backgroundColor: "var(--bg-primary)",
-                          color: "var(--text-primary)",
-                        }}
-                        onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}
-                        onBlur={(e) => (e.target.style.borderColor = "var(--border-default)")}
-                      />
-                      <p className="mt-1 text-xs" style={{ color: "var(--text-tertiary)" }}>
-                        Stored locally. Never sent to our servers.
-                      </p>
-                    </div>
-                    <div>
-                      <label
-                        className="mb-1.5 block text-xs font-medium"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        Ollama Base URL
-                      </label>
-                      <input
-                        type="url"
-                        value={ollamaBaseUrl}
-                        onChange={(e) => handleOllamaUrlChange(e.target.value)}
-                        placeholder="https://your-ollama-cloud/v1"
-                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors"
-                        style={{
-                          borderColor: "var(--border-default)",
-                          backgroundColor: "var(--bg-primary)",
-                          color: "var(--text-primary)",
-                        }}
-                        onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}
-                        onBlur={(e) => (e.target.style.borderColor = "var(--border-default)")}
-                      />
-                    </div>
-                  </div>
-                )}
+                <div>
+                  <label
+                    className="mb-1.5 block text-xs font-medium"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    <Key size={12} className="mr-1 inline" />
+                    Ollama Cloud API Key
+                  </label>
+                  <input
+                    type="password"
+                    value={ollamaKey}
+                    onChange={(e) => handleOllamaKeyChange(e.target.value)}
+                    placeholder="Enter your API key"
+                    className="w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors"
+                    style={{
+                      borderColor: "var(--border-default)",
+                      backgroundColor: "var(--bg-primary)",
+                      color: "var(--text-primary)",
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}
+                    onBlur={(e) => (e.target.style.borderColor = "var(--border-default)")}
+                  />
+                  <p className="mt-1 text-xs" style={{ color: "var(--text-tertiary)" }}>
+                    Stored locally. Never sent to our servers.
+                  </p>
+                </div>
               </div>
             </motion.div>
           )}
@@ -330,31 +233,6 @@ export default function HomePage() {
                 }}
               />
             )}
-
-            {/* Provider + Model Selection */}
-            <div className="space-y-3">
-              <label
-                className="block text-xs font-medium"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                AI Provider
-              </label>
-              <ProviderSelector value={provider} onChange={handleProviderChange} />
-            </div>
-
-            <div>
-              <label
-                className="mb-1.5 block text-xs font-medium"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                Vision Model
-              </label>
-              <ModelSelector
-                models={visionModels}
-                value={model}
-                onChange={setModel}
-              />
-            </div>
 
             {/* Analyze CTA */}
             <motion.button
@@ -406,7 +284,7 @@ export default function HomePage() {
                 onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--text-tertiary)")}
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border-default)")}
               >
-                Back to Settings
+                Back to Upload
               </button>
               <button
                 onClick={handleReset}
@@ -443,7 +321,7 @@ export default function HomePage() {
         style={{ borderColor: "var(--border-subtle)" }}
       >
         <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
-          Built with Next.js, TypeScript, and vision AI •{" "}
+          Built with Next.js, TypeScript, and Ollama Cloud •{" "}
           <a
             href={siteConfig.github}
             target="_blank"

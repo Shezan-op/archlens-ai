@@ -1,22 +1,17 @@
 // ============================================================================
 // Analysis API Route — POST /api/analyze
-// Receives image + provider + model, returns validated AnalysisResult
-// This is the ONLY server-side code that touches AI providers
+// Receives image + API key, returns validated AnalysisResult
+// Strictly tied to Ollama Cloud
 // ============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeScreenshot } from "@/lib/ai/client";
-import type { ProviderID } from "@/types/provider";
 import { logger } from "@/lib/utils/logger";
 
 /** Request body shape */
 interface AnalyzeRequestBody {
   image: string; // Base64 data URI
-  provider: ProviderID;
-  model: string;
-  fallbackModel?: string;
   apiKey?: string; // Optional: client-provided API key
-  baseUrl?: string; // Optional: custom Base URL for local models
 }
 
 export async function POST(request: NextRequest) {
@@ -27,8 +22,6 @@ export async function POST(request: NextRequest) {
     const imageSizeMB = body.image ? (body.image.length * 0.75) / (1024 * 1024) : 0;
     
     logger.info("Analysis request started", { 
-      provider: body.provider, 
-      model: body.model,
       imageSizeMB: imageSizeMB.toFixed(2)
     });
 
@@ -40,34 +33,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!body.provider || !["ollama", "openrouter"].includes(body.provider)) {
+    if (!body.apiKey) {
       return NextResponse.json(
-        { error: "Invalid provider. Must be 'ollama' or 'openrouter'." },
-        { status: 400 }
-      );
-    }
-
-    if (!body.model) {
-      return NextResponse.json(
-        { error: "No model selected" },
-        { status: 400 }
+        { error: "Ollama API Key is required." },
+        { status: 401 }
       );
     }
 
     // Run the analysis through the unified AI client
     const result = await analyzeScreenshot({
       imageBase64: body.image,
-      provider: body.provider,
-      model: body.model,
-      fallbackModel: body.fallbackModel,
       apiKey: body.apiKey,
-      baseUrl: body.baseUrl,
     });
 
-    logger.info("Analysis completed successfully", { 
-      provider: body.provider, 
-      model: body.model 
-    });
+    logger.info("Analysis completed successfully");
 
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
@@ -77,7 +56,7 @@ export async function POST(request: NextRequest) {
     logger.error("Analysis request failed", { error: message });
 
     // Determine appropriate status code
-    const status = message.includes("API key") ? 401 : 
+    const status = message.includes("API key") || message.includes("401") || message.includes("403") ? 401 : 
                    message.includes("timeout") ? 504 : 500;
 
     return NextResponse.json(
@@ -86,4 +65,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

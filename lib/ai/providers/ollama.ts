@@ -1,45 +1,94 @@
 // ============================================================================
-// Ollama Cloud Provider — OpenAI-compatible adapter
-// Endpoint: https://ollama.com/v1/chat/completions
-// API Key: "ollama" (required but ignored by server)
-// Vision: base64 image_url content type
-// JSON mode: response_format { type: "json_object" }
+// Ollama Cloud Native Provider
+// Implements strict compliance with Ollama Cloud API
 // ============================================================================
 
-import type { ChatCompletionRequest } from "@/types/provider";
-import { type ProviderAdapter, fetchChatCompletion } from "./base";
+import { ollamaConfig } from "@/config/ollama";
+import type { OllamaChatRequest, OllamaChatResponse } from "@/types/provider";
+import { logger } from "@/lib/utils/logger";
 
-export class OllamaProvider implements ProviderAdapter {
-  readonly id = "ollama" as const;
-  private baseUrl: string;
+/**
+ * Sends a native Ollama chat completion request.
+ */
+export async function sendOllamaRequest(
+  request: OllamaChatRequest,
+  apiKey: string,
+  retryCount = 0
+): Promise<string> {
+  const url = `${ollamaConfig.baseUrl}${ollamaConfig.chatEndpoint}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), ollamaConfig.timeoutMs);
 
-  constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl || process.env.OLLAMA_BASE_URL || "https://ollama.com/v1";
-  }
+  try {
+    const startTime = Date.now();
+    logger.debug("Starting Ollama Cloud request", { model: request.model });
 
-  async sendRequest(
-    request: ChatCompletionRequest,
-    apiKey?: string,
-    baseUrl?: string
-  ): Promise<string> {
-    const key = apiKey || process.env.OLLAMA_API_KEY || "ollama";
-    let endpoint = baseUrl || this.baseUrl;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(request),
+      signal: controller.signal,
+    });
 
-    // Local Ollama requires /v1 for OpenAI compatibility
-    if (endpoint === "http://localhost:11434" || endpoint === "http://127.0.0.1:11434") {
-      endpoint += "/v1";
+    const latencyMs = Date.now() - startTime;
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => "Could not read error body");
+      const status = response.status;
+      
+      logger.error("Ollama HTTP error", { status, latencyMs, errorType: "HTTP_ERROR" });
+
+      // Do not retry 401, 403, 400
+      if (status === 401 || status === 403 || status === 400) {
+        throw new Error(`Authentication or bad request error (${status}): ${errorBody}`);
+      }
+
+      // Retry logic for 5xx or temporary errors
+      if (retryCount < ollamaConfig.maxRetries) {
+        logger.warn(`Retrying request... (${retryCount + 1}/${ollamaConfig.maxRetries})`);
+        return sendOllamaRequest(request, apiKey, retryCount + 1);
+      }
+
+      throw new Error(`Ollama API error (${status}): ${errorBody}`);
     }
 
-    if (!key) {
-      throw new Error(
-        "Ollama Cloud API key is required. Set OLLAMA_API_KEY or provide it in settings."
-      );
+    const data: OllamaChatResponse = await response.json();
+    logger.info("Ollama request successful", { 
+      latencyMs, 
+      status: response.status,
+      model: data.model,
+      duration: data.total_duration 
+    });
+
+    const content = data.message?.content;
+    if (!content) {
+      throw new Error("Empty response from Ollama");
     }
 
-    const headers: Record<string, string> = {
-      Authorization: `Bearer ${key}`,
-    };
+    return content;
+  } catch (error) {
+    if ((error as Error).name === "AbortError") {
+      logger.error("Request timed out", { errorType: "TIMEOUT" });
+      
+      if (retryCount < ollamaConfig.maxRetries) {
+        logger.warn(`Retrying request after timeout... (${retryCount + 1}/${ollamaConfig.maxRetries})`);
+        return sendOllamaRequest(request, apiKey, retryCount + 1);
+      }
+      
+      throw new Error(`Request timed out after ${ollamaConfig.timeoutMs / 1000} seconds`);
+    }
+    
+    // If it's a fetch/network error (e.g. connection refused), retry
+    if ((error as Error).message.includes("fetch failed") && retryCount < ollamaConfig.maxRetries) {
+       logger.warn(`Retrying request after network failure... (${retryCount + 1}/${ollamaConfig.maxRetries})`);
+       return sendOllamaRequest(request, apiKey, retryCount + 1);
+    }
 
-    return fetchChatCompletion(endpoint + "/chat/completions", request, headers);
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

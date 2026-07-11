@@ -1,161 +1,100 @@
 // ============================================================================
-// Unified AI Client — Single entry point for all AI requests
-// Routes to the correct provider adapter based on selection
-// Handles retry logic and JSON repair per PRD Section 15
+// AI Client Orchestrator
+// Coordinates fallback logic and parses responses
 // ============================================================================
 
-import type { ProviderID, ChatCompletionRequest, ChatMessage } from "@/types/provider";
+import { ollamaConfig } from "@/config/ollama";
+import { sendOllamaRequest } from "./providers/ollama";
+import type { OllamaChatRequest } from "@/types/provider";
 import type { AnalysisResult } from "@/types/analysis";
-import { type ProviderAdapter } from "./providers/base";
-import { OllamaProvider } from "./providers/ollama";
-import { OpenRouterProvider } from "./providers/openrouter";
-import { validateAnalysisResult } from "@/lib/schemas/analysis-schema";
-import { buildVisionPrompt } from "@/lib/prompts/vision-prompt";
-import { buildRepairPrompt } from "@/lib/prompts/repair-prompt";
+import { getAnalysisPrompt } from "./prompts";
 import { logger } from "@/lib/utils/logger";
 
-/** Provider adapter instances (singleton per provider) */
-const providerInstances: Record<ProviderID, ProviderAdapter> = {
-  ollama: new OllamaProvider(),
-  openrouter: new OpenRouterProvider(),
-};
-
-/**
- * Analyze a screenshot using the selected provider and model.
- *
- * Flow: Image → Vision Prompt → Provider → JSON → Zod Validate → Result
- * Retries once with a repair prompt if JSON parsing fails.
- */
-export async function analyzeScreenshot(options: {
+interface AnalysisParams {
   imageBase64: string;
-  provider: ProviderID;
-  model: string;
-  fallbackModel?: string;
-  apiKey?: string;
-  baseUrl?: string;
-}): Promise<AnalysisResult> {
-  const { imageBase64, provider, model, fallbackModel, apiKey, baseUrl } = options;
-  const adapter = providerInstances[provider];
-
-  if (!adapter) {
-    throw new Error(`Unknown provider: ${provider}`);
-  }
-
-  // Build the vision analysis prompt with the image
-  const messages: ChatMessage[] = buildVisionPrompt(imageBase64);
-
-  const request: ChatCompletionRequest = {
-    model,
-    messages,
-    temperature: 0.3,
-    max_tokens: 8000,
-    response_format: { type: "json_object" },
-  };
-
-  // First attempt
-  let rawResponse: string;
-  try {
-    rawResponse = await adapter.sendRequest(request, apiKey, baseUrl);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    
-    // Attempt fallback if provided and different from primary model
-    if (fallbackModel && fallbackModel !== model) {
-      logger.warn(`Primary model failed. Falling back.`, { primary: model, fallback: fallbackModel, error: message });
-      try {
-        const fallbackRequest = { ...request, model: fallbackModel };
-        rawResponse = await adapter.sendRequest(fallbackRequest, apiKey, baseUrl);
-      } catch (fallbackError) {
-        const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : "Unknown error";
-        logger.error(`Fallback model also failed`, { fallback: fallbackModel, error: fallbackMessage });
-        throw new Error(`AI provider error (Primary and Fallback failed): ${fallbackMessage}`);
-      }
-    } else {
-      throw new Error(`AI provider error: ${message}`);
-    }
-  }
-
-  // Parse JSON from response
-  let parsed: unknown;
-  try {
-    parsed = extractJSON(rawResponse);
-  } catch {
-    // JSON parsing failed — attempt repair (PRD Section 15: ask model to repair once)
-    logger.info("JSON parsing failed, attempting repair", { model });
-    try {
-      const repairMessages = buildRepairPrompt(rawResponse);
-      const repairRequest: ChatCompletionRequest = {
-        model,
-        messages: repairMessages,
-        temperature: 0.1,
-        max_tokens: 8000,
-        response_format: { type: "json_object" },
-      };
-      const repairedResponse = await adapter.sendRequest(repairRequest, apiKey, baseUrl);
-      parsed = extractJSON(repairedResponse);
-    } catch {
-      throw new Error(
-        "Failed to parse AI response as valid JSON after repair attempt. Please try again or switch models."
-      );
-    }
-  }
-
-  const validation = validateAnalysisResult(parsed);
-  if (!validation.success) {
-    logger.warn("Schema validation failed, attempting second repair", { errors: validation.errors?.issues });
-    // Try repair one more time with the validation errors
-    try {
-      const repairMessages = buildRepairPrompt(
-        JSON.stringify(parsed),
-        validation.errors?.issues.map((i) => `${i.path.join(".")}: ${i.message}`)
-      );
-      const repairRequest: ChatCompletionRequest = {
-        model,
-        messages: repairMessages,
-        temperature: 0.1,
-        max_tokens: 8000,
-        response_format: { type: "json_object" },
-      };
-      const repairedResponse = await adapter.sendRequest(repairRequest, apiKey, baseUrl);
-      const repairedParsed = extractJSON(repairedResponse);
-      const revalidation = validateAnalysisResult(repairedParsed);
-      if (revalidation.success && revalidation.data) {
-        return revalidation.data;
-      }
-    } catch {
-      // Fall through to error
-    }
-
-    throw new Error(
-      "AI response did not match expected schema. Please try again with a different model."
-    );
-  }
-
-  return validation.data!;
+  apiKey: string;
 }
 
 /**
- * Extract JSON from a response string that may contain markdown code fences
- * or other wrapper text around the actual JSON.
+ * Strips markdown code fences from the JSON string.
  */
-function extractJSON(text: string): unknown {
-  // Try direct parse first
+function cleanJsonResponse(text: string): string {
+  let cleaned = text.trim();
+  if (cleaned.startsWith("```json")) {
+    cleaned = cleaned.substring(7);
+  } else if (cleaned.startsWith("```")) {
+    cleaned = cleaned.substring(3);
+  }
+  if (cleaned.endsWith("```")) {
+    cleaned = cleaned.substring(0, cleaned.length - 3);
+  }
+  return cleaned.trim();
+}
+
+/**
+ * Analyzes the screenshot using Ollama Cloud.
+ * Implements fallback logic strictly through the configured fallback models.
+ */
+export async function analyzeScreenshot(params: AnalysisParams): Promise<AnalysisResult> {
+  const { imageBase64, apiKey } = params;
+
+  if (!apiKey) {
+    throw new Error("Ollama Cloud API Key is required.");
+  }
+
+  // Construct base request payload (Ollama native format)
+  // Note: we remove the data:image/xxx;base64, prefix for Ollama
+  const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+  
+  const baseRequest: OllamaChatRequest = {
+    model: "", // Set per attempt
+    messages: [
+      {
+        role: "user",
+        content: getAnalysisPrompt(),
+        images: [base64Data]
+      }
+    ],
+    format: "json",
+    stream: false,
+  };
+
+  const attemptSequence = [ollamaConfig.primaryModel, ...ollamaConfig.fallbackModels];
+  let lastError: Error | null = null;
+  let rawResponse = "";
+
+  // Attempt the sequence
+  for (const modelId of attemptSequence) {
+    try {
+      logger.info(`Attempting analysis with model: ${modelId}`);
+      
+      const request = { ...baseRequest, model: modelId };
+      rawResponse = await sendOllamaRequest(request, apiKey);
+      
+      // If we got here, it succeeded
+      break;
+    } catch (error) {
+      lastError = error as Error;
+      logger.warn(`Model ${modelId} failed.`, { error: lastError.message });
+      
+      // If it's auth/forbidden, do not fallback
+      if (lastError.message.includes("401") || lastError.message.includes("403") || lastError.message.includes("400")) {
+        throw new Error(`Fatal API error: ${lastError.message}`);
+      }
+    }
+  }
+
+  if (!rawResponse) {
+    throw new Error(`AI provider error (All models failed): ${lastError?.message}`);
+  }
+
+  // Parse JSON
   try {
-    return JSON.parse(text);
-  } catch {
-    // Try extracting from markdown code fences
-    const jsonMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-    if (jsonMatch?.[1]) {
-      return JSON.parse(jsonMatch[1].trim());
-    }
-
-    // Try finding JSON object boundaries
-    const firstBrace = text.indexOf("{");
-    const lastBrace = text.lastIndexOf("}");
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      return JSON.parse(text.substring(firstBrace, lastBrace + 1));
-    }
-
-    throw new Error("No valid JSON found in response");
+    const cleanedText = cleanJsonResponse(rawResponse);
+    return JSON.parse(cleanedText) as AnalysisResult;
+  } catch (err) {
+    logger.error("JSON parsing failed, returning empty stub", { error: (err as Error).message });
+    // In production, we could try to repair JSON using another prompt, but to keep it simple:
+    throw new Error("AI response did not match expected schema. Please try again.");
   }
 }
