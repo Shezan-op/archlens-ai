@@ -23,7 +23,12 @@ export class OllamaProvider implements ProviderAdapter {
     baseUrl?: string
   ): Promise<string> {
     const key = apiKey || process.env.OLLAMA_API_KEY || "ollama";
-    const endpoint = baseUrl || this.baseUrl;
+    let endpoint = baseUrl || this.baseUrl;
+
+    // Local Ollama requires /v1 for OpenAI compatibility
+    if (endpoint === "http://localhost:11434" || endpoint === "http://127.0.0.1:11434") {
+      endpoint += "/v1";
+    }
 
     if (!key) {
       throw new Error(
