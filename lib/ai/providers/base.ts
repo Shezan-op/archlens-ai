@@ -8,6 +8,7 @@ import type {
   ChatCompletionResponse,
   ProviderID,
 } from "@/types/provider";
+import { logger } from "@/lib/utils/logger";
 
 /**
  * Abstract provider adapter interface.
@@ -38,7 +39,7 @@ export async function fetchChatCompletion(
   headers: Record<string, string>,
   timeoutMs: number = 45000 // 45 seconds default timeout
 ): Promise<string> {
-  const url = `${baseUrl}/chat/completions`;
+  const url = baseUrl; // baseUrl here is the full endpoint passed by the provider
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
