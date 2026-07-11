@@ -429,6 +429,7 @@ export default function HomePage() {
           <ErrorCard
             message={error}
             onRetry={handleAnalyze}
+            onBack={handleReset}
           />
         )}
       </main>
