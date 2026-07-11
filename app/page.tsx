@@ -32,7 +32,7 @@ export default function HomePage() {
   const [model, setModel] = useState<string>(defaultVisionModel.ollama);
   const [openRouterKey, setOpenRouterKey] = useState<string>("");
   const [ollamaKey, setOllamaKey] = useState<string>("");
-  const [ollamaBaseUrl, setOllamaBaseUrl] = useState<string>("http://127.0.0.1:11434/v1");
+  const [ollamaBaseUrl, setOllamaBaseUrl] = useState<string>("https://your-ollama-cloud/v1");
   const [status, setStatus] = useState<AnalysisStatus>("idle");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -248,7 +248,7 @@ export default function HomePage() {
                         type="password"
                         value={ollamaKey}
                         onChange={(e) => handleOllamaKeyChange(e.target.value)}
-                        placeholder="Optional for local Ollama"
+                        placeholder="Optional"
                         className="w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors"
                         style={{
                           borderColor: "var(--border-default)",
@@ -273,7 +273,7 @@ export default function HomePage() {
                         type="url"
                         value={ollamaBaseUrl}
                         onChange={(e) => handleOllamaUrlChange(e.target.value)}
-                        placeholder="http://127.0.0.1:11434/v1"
+                        placeholder="https://your-ollama-cloud/v1"
                         className="w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors"
                         style={{
                           borderColor: "var(--border-default)",
