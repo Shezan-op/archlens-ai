@@ -1,35 +1,34 @@
 "use client";
 
+import type { ConfidenceLevel } from "@/types/analysis";
 import { cn } from "@/lib/utils/cn";
 
 interface ConfidenceBadgeProps {
-  level: number;
+  level: ConfidenceLevel;
   label?: string;
   size?: "sm" | "md";
 }
 
-export function ConfidenceBadge({ level, label, size = "sm" }: ConfidenceBadgeProps) {
-  let style = {
+const styles: Record<ConfidenceLevel, { bg: string; text: string; label: string }> = {
+  high: {
     bg: "var(--success-muted)",
     text: "var(--success)",
     label: "High",
-  };
+  },
+  medium: {
+    bg: "var(--warning-muted)",
+    text: "var(--warning)",
+    label: "Medium",
+  },
+  low: {
+    bg: "var(--error-muted)",
+    text: "var(--error)",
+    label: "Low",
+  },
+};
 
-  if (level < 0.7) {
-    style = {
-      bg: "var(--error-muted)",
-      text: "var(--error)",
-      label: "Low",
-    };
-  } else if (level < 0.9) {
-    style = {
-      bg: "var(--warning-muted)",
-      text: "var(--warning)",
-      label: "Medium",
-    };
-  }
-
-  const defaultLabel = `${(level * 100).toFixed(0)}%`;
+export function ConfidenceBadge({ level, label, size = "sm" }: ConfidenceBadgeProps) {
+  const style = styles[level];
 
   return (
     <span
@@ -49,7 +48,7 @@ export function ConfidenceBadge({ level, label, size = "sm" }: ConfidenceBadgePr
         )}
         style={{ backgroundColor: style.text }}
       />
-      {label || defaultLabel}
+      {label || style.label}
     </span>
   );
 }
