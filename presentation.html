@@ -57,7 +57,7 @@
       pointer-events: all;
     }
 
-    .display    { font-family: var(--font-display); font-size: clamp(3rem, 7cqw, 6rem); line-height: 1.1; letter-spacing: -0.04em; font-weight: 700; margin-bottom: 2cqh; text-align: center; }
+    .display    { font-family: var(--font-display); font-size: clamp(3rem, 7cqw, 6.5rem); line-height: 1.1; letter-spacing: -0.04em; font-weight: 700; margin-bottom: 2cqh; text-align: center; }
     .headline   { font-family: var(--font-display); font-size: clamp(2rem, 5cqw, 3.5rem); line-height: 1.15; letter-spacing: -0.03em; font-weight: 700; margin-bottom: 2cqh; }
     .subhead    { font-size: clamp(1.1rem, 2.5cqw, 1.5rem); line-height: 1.4; color: var(--muted); margin-bottom: 2cqh; text-align: center; max-width: 75ch; font-weight: 400;}
     .body       { font-size: clamp(1rem, 2cqw, 1.25rem); line-height: 1.6; max-width: 75ch; text-wrap: pretty; color: var(--text); font-weight: 400;}
@@ -104,6 +104,27 @@
     .divider-center { border-top: 1px solid var(--accent); width: 40px; margin: 3cqh auto; opacity: 0.5; }
     
     code { font-family: var(--font-mono); background: var(--surface); padding: 0.2em 0.4em; border-radius: 4px; font-size: 0.9em; border: 1px solid rgba(255, 255, 255, 0.1); }
+
+    .btn-primary {
+      font-family: var(--font-mono); 
+      color: var(--bg); 
+      background: var(--accent);
+      font-size: 1rem; 
+      padding: 12px 24px; 
+      border: none; 
+      border-radius: 6px; 
+      font-weight: 700; 
+      letter-spacing: 0.05em; 
+      text-transform: uppercase;
+      cursor: pointer;
+      display: inline-block;
+      text-decoration: none;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    .btn-primary:hover {
+      opacity: 0.9;
+      transform: translateY(-2px);
+    }
 
     /* UI Shell */
     #ui-shell {
@@ -188,69 +209,69 @@
 <body>
 
   <div id="deck">
-    <!-- Slide 1: Documentation Title -->
+    <!-- Slide 1: Hero (Attention & Value Prop) -->
     <section class="slide title-slide active bg-accent">
-      <div class="label stagger-up">System Documentation</div>
-      <h1 class="display stagger-up">ArchLens AI <span class="highlight">Architecture</span></h1>
+      <div class="label stagger-up">ArchLens AI Platform</div>
+      <h1 class="display stagger-up">Stop Guessing. <span class="highlight">Start Building.</span></h1>
       <div class="divider-center stagger-up"></div>
-      <p class="subhead stagger-up">Technical overview, infrastructure stack, and provider integration for visual interface analysis.</p>
+      <p class="subhead stagger-up">Instantly reverse-engineer any UI screenshot into production-ready system architecture and design tokens.</p>
     </section>
 
-    <!-- Slide 2: The Domain Problem -->
+    <!-- Slide 2: Problem (Agitate) -->
     <section class="slide split-slide">
       <div>
-        <div class="label stagger-up">1.0 Domain Problem</div>
-        <h2 class="headline stagger-up">Visual to Structural Translation.</h2>
+        <div class="label stagger-up">1.0 The Pain Point</div>
+        <h2 class="headline stagger-up">The Translation <span class="highlight">Bottleneck.</span></h2>
         <div class="divider stagger-up"></div>
-        <p class="body stagger-up">Engineering teams frequently reference existing visual interfaces as technical targets. Translating a high-fidelity screenshot into a functional system design requires manual, cross-domain expertise (UX, frontend, backend).</p>
+        <p class="body stagger-up">You see a beautiful interface. You want to build it. But reverse-engineering the layout, database schema, and backend infrastructure takes days of cross-functional arguments.</p>
         <br/>
-        <p class="body stagger-up">ArchLens AI automates this translation layer by coupling vision-language models with strict JSON-schema enforcement to produce actionable technical documentation.</p>
+        <p class="body stagger-up">Every hour spent manually guessing component hierarchies and backend dependencies is an hour you aren't shipping. Your velocity suffers. Your team loses momentum.</p>
       </div>
       <div class="split-slide-right-center">
-        <div class="stat stagger-up" style="font-size: clamp(3rem, 6cqw, 5rem);">Manual<br/>Translation</div>
-        <p class="label stagger-up" style="margin:0; opacity: 0.5;">High latency, prone to error</p>
+        <div class="stat stagger-up" style="font-size: clamp(3rem, 6cqw, 5rem);">Lost<br/>Velocity</div>
+        <p class="label stagger-up" style="margin:0; opacity: 0.5;">Days wasted on manual teardowns</p>
       </div>
     </section>
 
-    <!-- Slide 3: Technical Stack (Moved Forward) -->
+    <!-- Slide 3: Solution (Benefit-driven Stack) -->
     <section class="slide split-slide bg-accent">
       <div>
-        <div class="label stagger-up">2.0 Technical Foundation</div>
-        <h2 class="headline stagger-up">Infrastructure <span class="highlight">Stack</span>.</h2>
+        <div class="label stagger-up">2.0 The Solution</div>
+        <h2 class="headline stagger-up">Instant <span class="highlight">Intelligence</span>.</h2>
         <div class="divider stagger-up"></div>
-        <p class="body stagger-up">A modern, edge-ready architecture prioritizing type safety, deterministic styling, and portable deployments.</p>
+        <p class="body stagger-up">ArchLens AI automates the teardown. We combine vision models with strict schema enforcement to generate your blueprint in seconds, built on a bulletproof stack that never fails.</p>
       </div>
       <div class="tech-grid stagger-up">
         <div class="tech-card">
           <span class="tech-card-title">Next.js 16</span>
-          <span class="tech-card-desc">App Router, React Server Components, and Turbopack for optimized build pipelines and fast serverless execution.</span>
+          <span class="tech-card-desc">App Router and Turbopack guarantee instantaneous serverless execution and lightning-fast load times.</span>
         </div>
         <div class="tech-card">
           <span class="tech-card-title">Tailwind CSS 4</span>
-          <span class="tech-card-desc">Utility-first styling with comprehensive CSS variable tokens for predictable, dark-mode native aesthetics.</span>
+          <span class="tech-card-desc">Utility-first styling ensures your generated design tokens map perfectly to modern CSS variables.</span>
         </div>
         <div class="tech-card">
-          <span class="tech-card-title">Zod & TS</span>
-          <span class="tech-card-desc">Strict runtime validation of LLM JSON outputs mapped directly to TypeScript interfaces (`AnalysisResult`).</span>
+          <span class="tech-card-title">Zod Validation</span>
+          <span class="tech-card-desc">Strict runtime validation means you never deal with hallucinated AI responses. Clean JSON only.</span>
         </div>
         <div class="tech-card">
           <span class="tech-card-title">Mermaid.js</span>
-          <span class="tech-card-desc">Dynamic client-side rendering of inferred architecture diagrams directly from LLM-generated syntax.</span>
+          <span class="tech-card-desc">Auto-generated, interactive architecture diagrams you can instantly copy into your own PRDs.</span>
         </div>
       </div>
     </section>
 
-    <!-- Slide 4: AI Provider Abstraction -->
+    <!-- Slide 4: Feature/Objection Handling -->
     <section class="slide split-slide">
       <div>
-        <div class="label stagger-up">3.0 LLM Integration</div>
-        <h2 class="headline stagger-up">Provider <span class="highlight">Abstraction</span>.</h2>
+        <div class="label stagger-up">3.0 Total Control</div>
+        <h2 class="headline stagger-up">Zero Vendor <span class="highlight">Lock-in</span>.</h2>
         <div class="divider stagger-up"></div>
-        <p class="body stagger-up">To prevent vendor lock-in, the system utilizes a unified AI adapter layer interacting over OpenAI-compatible endpoints.</p>
+        <p class="body stagger-up">Worried about being tied to one AI provider? Don't be. ArchLens AI uses a unified adapter layer interacting over OpenAI-compatible endpoints.</p>
         <br/>
         <ul style="list-style: none; display: flex; flex-direction: column; gap: 1rem;">
-          <li class="stagger-up"><span class="highlight font-mono">Local / Edge:</span> <code>Ollama Cloud</code> endpoint support for controlled, highly-available inference models.</li>
-          <li class="stagger-up"><span class="highlight font-mono">Distributed:</span> <code>OpenRouter</code> support for dynamic model routing across frontier intelligence (Anthropic, Google, OpenAI).</li>
+          <li class="stagger-up"><strong class="highlight font-mono">Total Privacy:</strong> Use <code>Ollama Cloud</code> to run highly-available, controlled inference models.</li>
+          <li class="stagger-up"><strong class="highlight font-mono">Maximum Power:</strong> Swap to <code>OpenRouter</code> for dynamic routing across frontier intelligence (Anthropic, OpenAI).</li>
         </ul>
       </div>
       <div class="split-slide-right-center stagger-up">
@@ -266,28 +287,28 @@ interface AIConfig {
       </div>
     </section>
 
-    <!-- Slide 5: Data Pipeline -->
+    <!-- Slide 5: How It Works -->
     <section class="slide list-slide">
-      <div class="label stagger-up">4.0 Data Pipeline</div>
-      <h2 class="headline stagger-up">Structured Output Enforcement.</h2>
-      <p class="body stagger-up" style="margin-bottom: 2cqh;">The core value relies on structured JSON generation, not chat dialogue. The AI pipeline is locked into strict schemas.</p>
+      <div class="label stagger-up">4.0 How It Works</div>
+      <h2 class="headline stagger-up">Structured Output, Every Time.</h2>
+      <p class="body stagger-up" style="margin-bottom: 2cqh;">Chatbots give you paragraphs. We give you structured engineering data. Here is the exact pipeline:</p>
       <ul>
-        <li class="stagger-up"><strong class="highlight">Vision Phase:</strong> Extracts layout, typography, components, and color hierarchy from base64 images.</li>
-        <li class="stagger-up"><strong class="highlight">Inference Phase:</strong> Projects frontend dependencies, backend infrastructure, and data requirements.</li>
-        <li class="stagger-up"><strong class="highlight">Validation Phase:</strong> Zod validates the schema before committing state to the UI renderer.</li>
-        <li class="stagger-up"><strong class="highlight">Export Phase:</strong> Validated data is compiled into a portable Markdown technical report.</li>
+        <li class="stagger-up"><strong class="highlight">Step 1: Vision Extraction.</strong> We pull layout, typography, components, and color hierarchy directly from your screenshot.</li>
+        <li class="stagger-up"><strong class="highlight">Step 2: System Inference.</strong> We project the frontend dependencies, backend infrastructure, and data models required to build it.</li>
+        <li class="stagger-up"><strong class="highlight">Step 3: Strict Validation.</strong> Zod validates the AI schema before committing it to state, guaranteeing zero structural errors.</li>
+        <li class="stagger-up"><strong class="highlight">Step 4: Markdown Export.</strong> You instantly download a portable, perfectly formatted Markdown technical report.</li>
       </ul>
     </section>
 
     <!-- Slide 6: Visual Layer -->
     <section class="slide split-slide">
       <div>
-        <div class="label stagger-up">5.0 Application UI</div>
-        <h2 class="headline stagger-up">Minimalist Dashboard.</h2>
+        <div class="label stagger-up">5.0 The Experience</div>
+        <h2 class="headline stagger-up">Developer-First <span class="highlight">Design.</span></h2>
         <div class="divider stagger-up"></div>
-        <p class="body stagger-up">The user interface is designed as a technical developer tool, emphasizing high contrast, restrained motion, and data density over decorative elements.</p>
+        <p class="body stagger-up">No noisy gradients. No distracting animations. The UI is a precision tool built for engineers, prioritizing high contrast and data density.</p>
         <br/>
-        <p class="body stagger-up">Built on a foundational `zinc` color scale (`#09090b` background) with a singular cyan accent for semantic highlighting and interaction feedback.</p>
+        <p class="body stagger-up">Anchored by a deep zinc palette and sharp cyan semantic highlights, the interface gets out of your way so you can focus on the architecture.</p>
       </div>
       <div class="split-slide-right-center stagger-up">
          <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -298,14 +319,14 @@ interface AIConfig {
       </div>
     </section>
 
-    <!-- Slide 7: Deployment -->
+    <!-- Slide 7: CTA (Action & Urgency) -->
     <section class="slide title-slide bg-accent">
-      <div class="label stagger-up">6.0 Deployment</div>
-      <h2 class="headline stagger-up">Edge Delivery.</h2>
+      <div class="label stagger-up">6.0 Get Started</div>
+      <h2 class="headline stagger-up">Generate Your First Blueprint.</h2>
       <div class="divider-center stagger-up"></div>
-      <p class="subhead stagger-up" style="margin: 0 auto;">Optimized for Vercel Edge Network. Stateless API routes handle AI delegation, ensuring zero-configuration scalability and minimal cold starts.</p>
-      <div class="stagger-up" style="margin-top: 5cqh;">
-        <span style="font-family: var(--font-mono); color: var(--text); font-size: 0.9rem; padding: 8px 16px; border: 1px solid var(--accent); border-radius: 6px; background: rgba(6,182,212,0.1);">git push origin main</span>
+      <p class="subhead stagger-up" style="margin: 0 auto 4cqh auto;">Optimized for the Vercel Edge Network. Zero configuration required. Deploy today and stop wasting time on manual teardowns.</p>
+      <div class="stagger-up">
+        <a href="#" class="btn-primary">Deploy to Vercel &rarr;</a>
       </div>
     </section>
 
@@ -366,7 +387,7 @@ interface AIConfig {
     });
 
     document.getElementById('deck').addEventListener('click', (e) => {
-      if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'CANVAS' && e.target.tagName !== 'SPAN') {
+      if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'CANVAS' && e.target.tagName !== 'SPAN' && e.target.tagName !== 'A') {
         updateSlide(currentSlide + 1);
       }
     });
